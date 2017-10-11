@@ -342,15 +342,18 @@ defmodule Mix.Dep.Loader do
   end
 
   defp mix_children(opts) do
+    mapdep = get_mapdep()
     from = Path.absname("mix.exs")
 
     (Mix.Project.config()[:deps] || [])
     |> Enum.map(&to_dep(&1, from))
+    |> Enum.map(&mapdep.(&1))
     |> split_by_env_and_target({opts[:env], nil})
     |> elem(0)
   end
 
   defp rebar_children(root_config, manager, dest) do
+    mapdep = get_mapdep()
     from = Path.absname(Path.join(dest, "rebar.config"))
 
     Mix.Rebar.recur(root_config, fn config ->
@@ -359,8 +362,21 @@ defmodule Mix.Dep.Loader do
       config
       |> Mix.Rebar.deps()
       |> Enum.map(fn dep -> %{to_dep(dep, from, manager) | extra: overrides} end)
+      |> Enum.map(&mapdep.(&1))
     end)
     |> Enum.concat()
+  end
+
+  # Return the user's mapdep function, if available, for mapping dependencies.
+  defp get_mapdep() do
+    depmapper_exs = Path.join(Mix.Utils.mix_home(), "depmapper.exs")
+
+    if File.exists?(depmapper_exs) do
+      Code.require_file(depmapper_exs)
+      &Mix.DepMapper.mapdep/1
+    else
+      & &1
+    end
   end
 
   defp overrides(:rebar3, config), do: config[:overrides] || []
