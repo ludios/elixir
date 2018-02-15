@@ -62,7 +62,7 @@ defmodule Inspect.Opts do
             charlists: :infer,
             char_lists: :infer,
             limit: 50,
-            printable_limit: 4096,
+            printable_limit: :infinity,
             width: 80,
             base: :decimal,
             pretty: false,
